@@ -44,14 +44,19 @@ func (s *Server) handleWS(ws *websocket.Conn) {
 	fmt.Println("new Connection from - ", ws.RemoteAddr())
 	client, err := s.authenticateToken(ws)
 	if err != nil {
-		ws.Write([]byte(err.Error()))
+		obj := map[string]interface{}{
+			"type": "ERR",
+			"data": err.Error()}
+		jsonBytes, _ := json.Marshal(obj)
+		ws.Write(jsonBytes)
 		return
 	}
 	err = client.SetRoom()
 	if err != nil {
-		ws.Write([]byte(err.Error()))
+		client.writeJSON("ERR", err.Error())
 		return
 	}
+	client.writeJSON("INFO", "Hello from Server")
 	// implement ping pong
 	buffer := make([]byte, 1024)
 	for {

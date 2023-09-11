@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -50,14 +51,14 @@ func (c *Client) SetRoom() error {
 				if client.Room.available() {
 					c.Room = client.Room
 					roomAllocated = true
-					c.Connection.Write([]byte("Joined to a Room"))
+					c.writeJSON("INFO", "Joined to a Room")
 					if c.Room.Client1 == nil {
 						c.Room.Client1 = c
 					} else {
 						c.Room.Client2 = c
 					}
-					client.Connection.Write([]byte("User " + c.Username + " Joined"))
-					c.Connection.Write([]byte("User " + client.Username + " Joined"))
+					client.writeJSON("INFO", "User "+c.Username+" Joined")
+					c.writeJSON("INFO", "User "+client.Username+" Joined")
 				}
 			}
 		}
@@ -66,7 +67,7 @@ func (c *Client) SetRoom() error {
 		room := NewRoom(c.server)
 		c.Room = room
 		c.Room.Client1 = c
-		c.Connection.Write([]byte("New Room created"))
+		c.writeJSON("INFO", "New Room created")
 	}
 	return nil
 }
@@ -74,15 +75,15 @@ func (c *Client) SetRoom() error {
 func (c *Client) Send(msg []byte) {
 	if c.Room.Client1 == c {
 		if c.Room.Client2 != nil {
-			c.Room.Client2.Connection.Write(msg)
+			c.Room.Client2.writeJSON("MSG", string(msg))
 		} else {
-			c.Connection.Write([]byte("No User Connected"))
+			c.writeJSON("INFO", "No User Connected")
 		}
 	} else {
 		if c.Room.Client1 != nil {
-			c.Room.Client1.Connection.Write(msg)
+			c.Room.Client1.writeJSON("MSG", string(msg))
 		} else {
-			c.Connection.Write([]byte("No User Connected"))
+			c.writeJSON("INFO", "No User Connected")
 		}
 	}
 }
@@ -93,12 +94,12 @@ func (c *Client) disconnect(s *Server) {
 	if c.Room.Client1 == c {
 		c.Room.Client1 = nil
 		if c.Room.Client2 != nil {
-			c.Room.Client2.Connection.Write([]byte(c.Username + " left"))
+			c.Room.Client2.writeJSON("INFO", c.Username+" left")
 		}
 	} else {
 		c.Room.Client2 = nil
 		if c.Room.Client1 != nil {
-			c.Room.Client1.Connection.Write([]byte(c.Username + " left"))
+			c.Room.Client1.writeJSON("INFO", c.Username+" left")
 		}
 	}
 	if c.Room.Client1 == nil && c.Room.Client2 == nil {
@@ -109,4 +110,13 @@ func (c *Client) disconnect(s *Server) {
 		}
 	}
 	c.Room = nil
+}
+
+func (c *Client) writeJSON(_type string, _data string) {
+	obj := map[string]interface{}{
+		"type": _type,
+		"data": _data,
+	}
+	jsonBytes, _ := json.Marshal(obj)
+	c.Connection.Write(jsonBytes)
 }
