@@ -12,3 +12,10 @@ func NewRoom(s *Server) *Room {
 	s.rooms[room] = true
 	return room
 }
+
+func (r *Room) available() bool {
+	if r.Client1 == nil || r.Client2 == nil {
+		return true
+	}
+	return false
+}

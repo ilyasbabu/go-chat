@@ -47,13 +47,18 @@ func (s *Server) handleWS(ws *websocket.Conn) {
 		ws.Write([]byte(err.Error()))
 		return
 	}
-	ws.Write([]byte("Hello from server"))
+	err = client.SetRoom()
+	if err != nil {
+		ws.Write([]byte(err.Error()))
+		return
+	}
+	// implement ping pong
 	buffer := make([]byte, 1024)
 	for {
 		n, err := ws.Read(buffer)
 		if err != nil {
 			if err == io.EOF {
-				fmt.Println("Disconnected  - ", client.Username)
+				client.disconnect(s)
 				break
 			}
 			fmt.Println(err)
@@ -61,6 +66,7 @@ func (s *Server) handleWS(ws *websocket.Conn) {
 		}
 		msg := buffer[:n]
 		fmt.Println("msg recieved in server - ", string(msg))
+		client.Send(msg)
 	}
 }
 
