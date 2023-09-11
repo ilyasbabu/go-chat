@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"time"
 
 	"golang.org/x/net/websocket"
 )
@@ -88,4 +89,25 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	client := NewClient(req.Username, token, s)
 	s.clients[client] = true
 	http.Error(w, token.Key, http.StatusOK)
+}
+
+func (s *Server) StatusLoggerListener() {
+	var inp string
+	for {
+		fmt.Scanln(&inp)
+		if inp == "s" {
+			var activeWScount int
+			for client := range s.clients {
+				if client.Connection != nil {
+					activeWScount++
+				}
+			}
+			fmt.Println("-----------Server status-----------")
+			fmt.Println(" clients count in server - ", len(s.clients))
+			fmt.Println(" active websocket count - ", activeWScount)
+			fmt.Println(" active rooms count - ", len(s.rooms))
+			fmt.Println("-----------------------------------")
+		}
+		time.Sleep(time.Second * 1)
+	}
 }
