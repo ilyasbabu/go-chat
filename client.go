@@ -51,14 +51,16 @@ func (c *Client) SetRoom() error {
 				if client.Room.available() {
 					c.Room = client.Room
 					roomAllocated = true
-					c.writeJSON("INFO", "Joined to a Room")
+					fmt.Println("Joined to a room")
 					if c.Room.Client1 == nil {
 						c.Room.Client1 = c
 					} else {
 						c.Room.Client2 = c
 					}
 					client.writeJSON("INFO", "User "+c.Username+" Joined")
+					client.writeJSON("CONN", c.Username)
 					c.writeJSON("INFO", "User "+client.Username+" Joined")
+					c.writeJSON("CONN", client.Username)
 				}
 			}
 		}
@@ -67,7 +69,7 @@ func (c *Client) SetRoom() error {
 		room := NewRoom(c.server)
 		c.Room = room
 		c.Room.Client1 = c
-		c.writeJSON("INFO", "New Room created")
+		fmt.Println("New Room created")
 	}
 	return nil
 }
@@ -76,12 +78,14 @@ func (c *Client) Send(msg []byte) {
 	if c.Room.Client1 == c {
 		if c.Room.Client2 != nil {
 			c.Room.Client2.writeJSON("MSG", string(msg))
+			fmt.Println("MESSAGE - (" + string(msg) + ") from - " + c.Username + " to - " + c.Room.Client2.Username)
 		} else {
 			c.writeJSON("INFO", "No User Connected")
 		}
 	} else {
 		if c.Room.Client1 != nil {
 			c.Room.Client1.writeJSON("MSG", string(msg))
+			fmt.Println("MESSAGE - (" + string(msg) + ") from - " + c.Username + " to - " + c.Room.Client1.Username)
 		} else {
 			c.writeJSON("INFO", "No User Connected")
 		}
@@ -95,11 +99,13 @@ func (c *Client) disconnect(s *Server) {
 		c.Room.Client1 = nil
 		if c.Room.Client2 != nil {
 			c.Room.Client2.writeJSON("INFO", c.Username+" left")
+			c.Room.Client2.writeJSON("DISCONN", "")
 		}
 	} else {
 		c.Room.Client2 = nil
 		if c.Room.Client1 != nil {
 			c.Room.Client1.writeJSON("INFO", c.Username+" left")
+			c.Room.Client1.writeJSON("DISCONN", "")
 		}
 	}
 	if c.Room.Client1 == nil && c.Room.Client2 == nil {

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"time"
 
 	"golang.org/x/net/websocket"
 )
@@ -40,6 +39,24 @@ func (s *Server) authenticateToken(ws *websocket.Conn) (*Client, error) {
 	return nil, errors.New("no token provided")
 }
 
+func readLoop(client *Client, ws *websocket.Conn, ch chan bool) {
+	buffer := make([]byte, 1024)
+	for {
+		n, err := ws.Read(buffer)
+		if err != nil {
+			if err == io.EOF {
+				ch <- true
+				break
+			}
+			fmt.Println(err)
+			continue
+		}
+		msg := buffer[:n]
+		fmt.Println("msg recieved in server - ", string(msg))
+		client.Send(msg)
+	}
+}
+
 func (s *Server) handleWS(ws *websocket.Conn) {
 	fmt.Println("new Connection from - ", ws.RemoteAddr())
 	client, err := s.authenticateToken(ws)
@@ -56,23 +73,10 @@ func (s *Server) handleWS(ws *websocket.Conn) {
 		client.writeJSON("ERR", err.Error())
 		return
 	}
-	client.writeJSON("INFO", "Hello from Server")
-	// implement ping pong
-	buffer := make([]byte, 1024)
-	for {
-		n, err := ws.Read(buffer)
-		if err != nil {
-			if err == io.EOF {
-				client.disconnect(s)
-				break
-			}
-			fmt.Println(err)
-			continue
-		}
-		msg := buffer[:n]
-		fmt.Println("msg recieved in server - ", string(msg))
-		client.Send(msg)
-	}
+	ch := make(chan bool)
+	go readLoop(client, ws, ch)
+	<-ch
+	client.disconnect(s)
 }
 
 func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
@@ -99,7 +103,14 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	token := NewToken()
 	client := NewClient(req.Username, token, s)
 	s.clients[client] = true
-	http.Error(w, token.Key, http.StatusOK)
+	w.Header().Set("Content-Type", "application/json")
+	response := struct {
+		Token string `json:"token"`
+	}{
+		Token: token.Key,
+	}
+	jsonResponse, _ := json.Marshal(response)
+	w.Write(jsonResponse)
 }
 
 func (s *Server) StatusLoggerListener() {
@@ -119,6 +130,5 @@ func (s *Server) StatusLoggerListener() {
 			fmt.Println(" active rooms count - ", len(s.rooms))
 			fmt.Println("-----------------------------------")
 		}
-		time.Sleep(time.Second * 1)
 	}
 }
