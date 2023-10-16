@@ -1,4 +1,4 @@
-package main
+package app
 
 type Room struct {
 	Client1 *Client

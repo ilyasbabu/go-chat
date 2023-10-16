@@ -1,4 +1,4 @@
-package main
+package app
 
 import (
 	"encoding/json"
@@ -57,7 +57,7 @@ func readLoop(client *Client, ws *websocket.Conn, ch chan bool) {
 	}
 }
 
-func (s *Server) handleWS(ws *websocket.Conn) {
+func (s *Server) HandleWS(ws *websocket.Conn) {
 	fmt.Println("new Connection from - ", ws.RemoteAddr())
 	client, err := s.authenticateToken(ws)
 	if err != nil {
@@ -79,7 +79,7 @@ func (s *Server) handleWS(ws *websocket.Conn) {
 	client.disconnect(s)
 }
 
-func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
+func (s *Server) HandleLogin(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization,access-control-allow-methods,access-control-allow-origin,access-control-allow-headers")
